@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Website Maker 🎀</title>
+<link href="https://fonts.googleapis.com/css2?family=Chewy&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+:root{
+  --pink:#F6A6BB;--pink2:#F4BBC9;--pink3:#F7D1D8;--pink4:#FAE6E7;--pink5:#F7EEED;
+  --blue:#8FC9FF;--blue2:#A2D2FF;--blue3:#BDE0FE;--blue4:#D1E8FC;--blue5:#E5F0FA;
+  --cream:#FFFDF9;--text:#3d2b35;--muted:#a08090;
+}
+
+html,body{height:100%;background:var(--cream);font-family:'Nunito',sans-serif;color:var(--text);overflow-x:hidden}
+
+/* ── SCREEN MANAGER ── */
+.screen{display:none;min-height:100vh}
+.screen.active{display:block}
+
+/* ═══════════════════════════════
+   SCREEN 1 — TEMPLATE PICKER
+═══════════════════════════════ */
+#screen-pick{
+  background: linear-gradient(160deg,#fff0f5 0%,#e8f4ff 50%,#fff5e0 100%);
+  padding:0 0 40px;
+}
+
+.pick-header{
+  text-align:center;
+  padding:36px 20px 20px;
+}
+.pick-header .logo{
+  font-family:'Chewy',cursive;
+  font-size:2rem;
+  color:var(--pink);
+  letter-spacing:1px;
+  margin-bottom:4px;
+  display:block;
+}
+.pick-header h1{
+  font-size:1.5rem;
+  font-weight:900;
+  color:var(--text);
+  margin-bottom:6px;
+}
+.pick-header p{font-size:.9rem;color:var(--muted);font-weight:600}
+
+.pick-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+  padding:0 16px;
+  max-width:480px;
+  margin:0 auto;
+}
+
+.tpl-card{
+  background:white;
+  border-radius:24px;
+  padding:20px 14px 16px;
+  border:3px solid transparent;
+  box-shadow:0 6px 0 var(--pink3),0 10px 20px rgba(246,166,187,.15);
+  cursor:pointer;
+  transition:transform .12s,box-shadow .12s;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+.tpl-card:active{transform:translateY(4px);box-shadow:0 2px 0 var(--pink3)}
+.tpl-card.blue{box-shadow:0 6px 0 var(--blue3),0 10px 20px rgba(143,201,255,.15)}
+.tpl-card.blue:active{box-shadow:0 2px 0 var(--blue3)}
+
+.tpl-card .emoji{font-size:2.4rem;display:block;margin-bottom:8px;line-height:1}
+.tpl-card .tpl-name{font-size:.88rem;font-weight:800;color:var(--text);margin-bottom:4px}
+.tpl-card .tpl-desc{font-size:.73rem;color:var(--muted);font-weight:600;line-height:1.4}
+
+.tpl-card .badge{
+  position:absolute;top:10px;right:10px;
+  background:var(--pink);color:white;
+  font-size:.6rem;font-weight:800;
+  padding:2px 7px;border-radius:20px;
+  letter-spacing:.3px;
+}
+.tpl-card.blue .badge{background:var(--blue)}
+
+/* preview dots */
+.preview-dots{
+  display:flex;gap:4px;justify-content:center;margin-top:10px;
+}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--pink3)}
+.dot.filled{background:var(--pink)}
+.tpl-card.blue .dot{background:var(--blue3)}
+.tpl-card.blue .dot.filled{background:var(--blue)}
+
+/* ═══════════════════════════════
+   SCREEN 2 — EDITOR
+═══════════════════════════════ */
+#screen-edit{
+  display:none;
+  flex-direction:column;
+  min-height:100vh;
+  position:relative;
+}
+#screen-edit.active{display:flex}
+
+/* floating top bar */
+.edit-bar{
+  position:fixed;top:0;left:0;right:0;
+  z-index:9999;
+  display:flex;align-items:center;gap:8px;
+  padding:10px 14px;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(12px);
+  border-bottom:2px solid var(--pink3);
+  box-shadow:0 4px 16px rgba(246,166,187,.2);
+}
+.edit-bar .back-btn{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--pink4);border:none;
+  font-size:1rem;cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 0 var(--pink3);
+}
+.edit-bar .back-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--pink3)}
+.edit-bar .tpl-label{
+  font-size:.8rem;font-weight:800;color:var(--text);
+  flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.edit-hint{
+  font-size:.68rem;color:var(--muted);font-weight:700;
+  background:var(--pink5);padding:3px 8px;border-radius:20px;
+  white-space:nowrap;flex-shrink:0;
+}
+.btn-build{
+  padding:8px 16px;border-radius:20px;border:none;
+  background:var(--pink);color:white;
+  font-family:'Nunito',sans-serif;font-weight:800;
+  font-size:.82rem;cursor:pointer;flex-shrink:0;
+  box-shadow:0 4px 0 #d4829a;
+  transition:transform .1s,box-shadow .1s;
+}
+.btn-build:active{transform:translateY(3px);box-shadow:0 1px 0 #d4829a}
+.btn-build.blue-theme{background:var(--blue);box-shadow:0 4px 0 #6aaede}
+.btn-build.blue-theme:active{box-shadow:0 1px 0 #6aaede}
+
+/* page nav pills */
+.page-nav{
+  position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+  z-index:9999;
+  display:flex;gap:6px;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(12px);
+  border:2px solid var(--pink3);
+  border-radius:30px;padding:6px 10px;
+  box-shadow:0 4px 16px rgba(246,166,187,.25);
+  max-width:94vw;overflow-x:auto;scrollbar-width:none;
+}
+.page-nav::-webkit-scrollbar{display:none}
+.page-pill{
+  padding:5px 12px;border-radius:20px;border:none;
+  font-family:'Nunito',sans-serif;font-size:.72rem;font-weight:800;
+  cursor:pointer;white-space:nowrap;
+  background:transparent;color:var(--muted);
+  transition:all .12s;
+}
+.page-pill.active{background:var(--pink);color:white;box-shadow:0 2px 0 #d4829a}
+.page-nav.blue-theme .page-pill.active{background:var(--blue);box-shadow:0 2px 0 #6aaede}
+
+/* template content area */
+.tpl-content{
+  flex:1;
+  padding-top:60px; /* below fixed bar */
+  padding-bottom:70px; /* above page nav */
+}
+
+/* EDITABLE HIGHLIGHT */
+[data-editable]{
+  outline:none;
+  position:relative;
+  cursor:text !important;
+  border-radius:6px;
+  transition:background .15s,box-shadow .15s;
+}
+[data-editable]:hover{
+  background:rgba(246,166,187,.15)!important;
+  box-shadow:0 0 0 2px rgba(246,166,187,.5);
+}
+[data-editable]:focus{
+  background:rgba(246,166,187,.2)!important;
+  box-shadow:0 0 0 2.5px var(--pink)!important;
+  outline:none!important;
+}
+.blue-template [data-editable]:hover{
+  background:rgba(143,201,255,.15)!important;
+  box-shadow:0 0 0 2px rgba(143,201,255,.5);
+}
+.blue-template [data-editable]:focus{
+  background:rgba(143,201,255,.2)!important;
+  box-shadow:0 0 0 2.5px var(--blue)!important;
+}
+
+/* tap image to replace */
+img[data-img-key]{
+  cursor:pointer!important;
+  transition:opacity .15s,outline .15s;
+}
+img[data-img-key]:hover{opacity:.85;outline:3px solid rgba(246,166,187,.7);outline-offset:2px}
+.blue-template img[data-img-key]:hover{outline-color:rgba(143,201,255,.8)}
+
+/* ═══════════════════════════════
+   MODAL — BUILD
+═══════════════════════════════ */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(61,43,53,.6);
+  backdrop-filter:blur(8px);
+  z-index:99999;
+  align-items:flex-end;justify-content:center;
+  padding-bottom:0;
+}
+.modal-overlay.show{display:flex}
+
+.modal-sheet{
+  background:white;
+  border-radius:32px 32px 0 0;
+  padding:24px 22px 40px;
+  width:100%;max-width:480px;
+  box-shadow:0 -8px 40px rgba(246,166,187,.3);
+  animation:slideUp .28s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+
+.modal-handle{width:40px;height:4px;border-radius:2px;background:var(--pink3);margin:0 auto 18px}
+.modal-sheet h3{font-size:1.2rem;font-weight:900;margin-bottom:4px;text-align:center}
+.modal-sheet .modal-sub{font-size:.82rem;color:var(--muted);text-align:center;margin-bottom:18px;font-weight:600}
+
+.repo-wrap{
+  background:var(--pink5);
+  border:2.5px solid var(--pink3);
+  border-radius:16px;padding:12px 14px;
+  margin-bottom:8px;
+}
+.repo-label{font-size:.7rem;font-weight:800;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px}
+.repo-prefix{font-size:.72rem;color:var(--muted);font-weight:700;font-family:'Courier New',monospace;margin-bottom:4px;display:block}
+.repo-input{
+  width:100%;border:none;background:transparent;
+  font-size:1rem;font-weight:800;color:var(--text);
+  font-family:'Nunito',sans-serif;outline:none;
+}
+.repo-input::placeholder{color:var(--pink3);font-weight:700}
+
+.repo-status{
+  font-size:.78rem;font-weight:700;min-height:20px;
+  margin-bottom:14px;padding:0 2px;
+  transition:color .15s;
+}
+.repo-status.ok{color:#4CAF50}
+.repo-status.err{color:#f44}
+.repo-status.checking{color:var(--muted)}
+
+.btn-confirm{
+  width:100%;padding:14px;border-radius:20px;border:none;
+  background:var(--pink);color:white;
+  font-family:'Nunito',sans-serif;font-weight:900;font-size:1rem;
+  cursor:pointer;box-shadow:0 5px 0 #d4829a;
+  transition:transform .1s,box-shadow .1s;
+}
+.btn-confirm:active{transform:translateY(4px);box-shadow:0 1px 0 #d4829a}
+.btn-confirm:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:0 5px 0 #d4829a}
+.modal-sheet.blue-modal .btn-confirm{background:var(--blue);box-shadow:0 5px 0 #6aaede}
+
+/* progress */
+.prog-area{margin-top:14px;display:none}
+.prog-area.show{display:block}
+.prog-track{height:10px;background:var(--pink4);border-radius:5px;overflow:hidden;margin-bottom:8px}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--pink),var(--pink2));border-radius:5px;width:0%;transition:width .4s ease}
+.modal-sheet.blue-modal .prog-track{background:var(--blue4)}
+.modal-sheet.blue-modal .prog-bar{background:linear-gradient(90deg,var(--blue),var(--blue2))}
+.prog-label{font-size:.78rem;color:var(--muted);font-weight:700;text-align:center}
+
+/* done */
+.done-area{display:none;text-align:center;margin-top:14px}
+.done-area.show{display:block}
+.done-emoji{font-size:2.5rem;display:block;margin-bottom:6px}
+.done-msg{font-size:.9rem;font-weight:800;margin-bottom:3px}
+.done-note{font-size:.75rem;color:var(--muted);font-weight:600;margin-bottom:10px}
+.done-link{
+  display:block;padding:10px 16px;
+  background:var(--pink5);border:2px solid var(--pink3);
+  border-radius:14px;font-size:.78rem;font-weight:700;
+  color:var(--pink);word-break:break-all;text-decoration:none;
+}
+.done-link:hover{background:var(--pink4)}
+
+/* ═══════════════════════════════
+   TOAST
+═══════════════════════════════ */
+.toast{
+  position:fixed;top:70px;left:50%;transform:translateX(-50%) scale(.9);
+  background:var(--text);color:white;
+  border-radius:20px;padding:8px 18px;
+  font-size:.8rem;font-weight:700;
+  opacity:0;transition:all .2s;z-index:999999;
+  pointer-events:none;white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) scale(1)}
+
+/* ═══════════════════════════════
+   FILE INPUT
+═══════════════════════════════ */
+#filePicker{display:none}
+</style>
+</head>
+<body>
+
+<!-- ═══ SCREEN 1: TEMPLATE PICKER ═══ -->
+<div class="screen active" id="screen-pick">
+  <div class="pick-header">
+    <span class="logo">✨ webot</span>
+    <h1>Pilih Template</h1>
+    <p>Tap template buat mulai edit!</p>
+  </div>
+
+  <div class="pick-grid">
+
+    <div class="tpl-card" onclick="openEditor('birthday1')">
+      <span class="badge">Pink 🌸</span>
+      <span class="emoji">🎂</span>
+      <div class="tpl-name">Birthday 1</div>
+      <div class="tpl-desc">Tiup kue, foto polaroid & surat</div>
+      <div class="preview-dots">
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+      </div>
+    </div>
+
+    <div class="tpl-card blue" onclick="openEditor('birthday2')">
+      <span class="badge">Blue 💙</span>
+      <span class="emoji">🎁</span>
+      <div class="tpl-name">Birthday 2</div>
+      <div class="tpl-desc">GIF lucu, letter & buka kado</div>
+      <div class="preview-dots">
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+      </div>
+    </div>
+
+    <div class="tpl-card" onclick="openEditor('bucin1')">
+      <span class="badge">Pink 🌸</span>
+      <span class="emoji">💗</span>
+      <div class="tpl-name">Bucin 1</div>
+      <div class="tpl-desc">Passcode, surat panjang & puzzle</div>
+      <div class="preview-dots">
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+      </div>
+    </div>
+
+    <div class="tpl-card blue" onclick="openEditor('bucin2')">
+      <span class="badge">Blue 💙</span>
+      <span class="emoji">💌</span>
+      <div class="tpl-name">Bucin 2</div>
+      <div class="tpl-desc">TicTacToe, wheel, memories & Spotify</div>
+      <div class="preview-dots">
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+        <div class="dot filled"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+    </div>
+
+    <div class="tpl-card blue" style="grid-column:span 2" onclick="openEditor('puzzle')">
+      <span class="badge">Blue 💙</span>
+      <span class="emoji">🧩</span>
+      <div class="tpl-name">Puzzle Game</div>
+      <div class="tpl-desc">Pilih gambar, main puzzle, surprise!</div>
+      <div class="preview-dots" style="justify-content:center">
+        <div class="dot filled"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══ SCREEN 2: EDITOR ═══ -->
+<div class="screen" id="screen-edit">
+
+  <!-- Fixed top bar -->
+  <div class="edit-bar" id="editBar">
+    <button class="back-btn" onclick="goBack()">←</button>
+    <span class="tpl-label" id="tplLabel">Birthday 1</span>
+    <span class="edit-hint">✏️ tap teks = edit</span>
+    <button class="btn-build" id="btnBuild" onclick="openModal()">🚀 Build</button>
+  </div>
+
+  <!-- Template content injected here -->
+  <div class="tpl-content" id="tplContent"></div>
+
+  <!-- Page navigation pills -->
+  <div class="page-nav" id="pageNav"></div>
+
+</div>
+
+<!-- ═══ MODAL: BUILD ═══ -->
+<div class="modal-overlay" id="modalOverlay" onclick="overlayTap(event)">
+  <div class="modal-sheet" id="modalSheet">
+    <div class="modal-handle"></div>
+    <h3>🚀 Build Website</h3>
+    <p class="modal-sub">Website langsung live di GitHub Pages!</p>
+
+    <div class="repo-wrap">
+      <div class="repo-label">Nama Website</div>
+      <div class="repo-prefix">cargift.github.io / <span id="repoPreview" style="color:var(--text)">...</span></div>
+      <input class="repo-input" id="repoInput" placeholder="nama-repo-kamu" oninput="onRepoInput(this.value)" autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="repo-status" id="repoStatus"></div>
+
+    <button class="btn-confirm" id="btnConfirm" disabled onclick="startBuild()">Bikin sekarang! ✨</button>
+
+    <div class="prog-area" id="progArea">
+      <div class="prog-track"><div class="prog-bar" id="progBar"></div></div>
+      <div class="prog-label" id="progLabel">Mempersiapkan...</div>
+    </div>
+
+    <div class="done-area" id="doneArea">
+      <span class="done-emoji">🎉</span>
+      <div class="done-msg">Website berhasil dibuat!</div>
+      <div class="done-note">Tunggu 1–2 menit biar aktif ya ✨</div>
+      <a class="done-link" id="doneLink" href="#" target="_blank">–</a>
+    </div>
+  </div>
+</div>
+
+<!-- FILE PICKER -->
+<input type="file" id="filePicker" accept="image/*" onchange="onFilePicked(event)">
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════
+const GH_USER  = "cargift";
+const WORKER   = "https://cargift.ahmadadrian737.workers.dev/"; // ganti dengan URL worker kamu
+
+// ══════════════════════════════════════════
+// TEMPLATE CONFIG
+// ══════════════════════════════════════════
+const TPLS = {
+  birthday1:{
+    label:"🎂 Birthday 1", isBlue:false,
+    pages:["Intro","Foto","Surat"],
+    pageIds:["page1","page2","page3"],
+    photos:[
+      {key:"p1",ph:"[PHOTO1]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+      {key:"p2",ph:"[PHOTO2]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+      {key:"p3",ph:"[PHOTO3]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+      {key:"p4",ph:"[PHOTO4]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+    ]
+  },
+  birthday2:{
+    label:"🎁 Birthday 2", isBlue:true,
+    pages:["Hello","Happy Bday","Letter","Gift"],
+    pageIds:["page1","page2","page3","page4"],
+    photos:[]
+  },
+  bucin1:{
+    label:"💗 Bucin 1", isBlue:false,
+    pages:["Passcode","Letter","Puzzle","Hugs"],
+    pageIds:["page1","page2","page3","page4"],
+    photos:[
+      {key:"bp1",ph:"[PHOTO_PAGE1]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+      {key:"bp2",ph:"[PHOTO_PAGE2]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+      {key:"bp3",ph:"[PUZZLE_IMAGE]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+    ]
+  },
+  bucin2:{
+    label:"💌 Bucin 2", isBlue:true,
+    pages:["Intro","TicTacToe","Wheel","Letter","Memories","Spotify"],
+    pageIds:["page1","page2","page3","page4","page5","page6"],
+    photos:[
+      {key:"bw1",ph:"[WHEEL_PHOTO1]",def:"https://files.catbox.moe/7kuaxg.jpg"},
+      {key:"bm1",ph:"[MEMORY_PHOTO1]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+      {key:"bm2",ph:"[MEMORY_PHOTO2]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+      {key:"bm3",ph:"[MEMORY_PHOTO3]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+      {key:"bm4",ph:"[MEMORY_PHOTO4]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+    ]
+  },
+  puzzle:{
+    label:"🧩 Puzzle", isBlue:true,
+    pages:["Game"],
+    pageIds:[],
+    photos:[
+      {key:"pz1",ph:"[PUZZLE_IMAGE1]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+      {key:"pz2",ph:"[PUZZLE_IMAGE2]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+      {key:"pz3",ph:"[PUZZLE_IMAGE3]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+    ]
+  }
+};
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let curTpl = null;
+let curPage = 0;
+let rawHTMLs = {};
+let photos = {}; // key → {dataUrl, blob, filename}
+let pickTarget = null;
+let repoTimer = null;
+let repoAvail = false;
+let building = false;
+
+// ══════════════════════════════════════════
+// BOOT — preload all templates
+// ══════════════════════════════════════════
+(async function boot(){
+  for(const name of Object.keys(TPLS)){
+    try{
+      const r = await fetch(name+".html");
+      if(!r.ok) throw new Error();
+      rawHTMLs[name] = await r.text();
+    }catch{
+      rawHTMLs[name] = `<div style="padding:40px 20px;text-align:center;font-family:'Nunito',sans-serif">
+        <div style="font-size:3rem">😅</div>
+        <p style="font-weight:800;margin-top:10px">File <b>${name}.html</b> tidak ditemukan</p>
+        <p style="color:#a08090;font-size:.85rem;margin-top:6px">Taruh semua file HTML di folder yang sama dengan index.html ini</p>
+      </div>`;
+    }
+  }
+})();
+
+// ══════════════════════════════════════════
+// SCREEN SWITCH
+// ══════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>{
+    s.classList.remove('active');
+    if(s.id==='screen-edit') s.style.display='none';
+  });
+  const el = document.getElementById(id);
+  if(id==='screen-edit'){
+    el.style.display='flex';
+    el.classList.add('active');
+  } else {
+    el.classList.add('active');
+  }
+}
+
+// ══════════════════════════════════════════
+// OPEN EDITOR
+// ══════════════════════════════════════════
+function openEditor(name){
+  curTpl = name;
+  curPage = 0;
+  const cfg = TPLS[name];
+
+  // Set bar label & theme
+  document.getElementById('tplLabel').textContent = cfg.label;
+  const bar = document.getElementById('editBar');
+  const nav = document.getElementById('pageNav');
+  const buildBtn = document.getElementById('btnBuild');
+  if(cfg.isBlue){
+    bar.style.borderBottomColor='var(--blue3)';
+    buildBtn.className='btn-build blue-theme';
+    nav.className='page-nav blue-theme';
+  } else {
+    bar.style.borderBottomColor='var(--pink3)';
+    buildBtn.className='btn-build';
+    nav.className='page-nav';
+  }
+
+  renderEditor();
+  buildPageNav();
+  showScreen('screen-edit');
+  window.scrollTo(0,0);
+}
+
+function goBack(){
+  showScreen('screen-pick');
+  curTpl = null;
+}
+
+// ══════════════════════════════════════════
+// RENDER TEMPLATE INTO EDITOR
+// ══════════════════════════════════════════
+function renderEditor(){
+  const cfg = TPLS[curTpl];
+  let html = rawHTMLs[curTpl] || '';
+
+  // Replace photo placeholders with current data
+  cfg.photos.forEach(s=>{
+    const d = photos[s.key];
+    html = html.split(s.ph).join(d ? d.dataUrl : s.def);
+  });
+
+  // Parse HTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html,'text/html');
+
+  const content = document.getElementById('tplContent');
+  content.innerHTML='';
+  if(cfg.isBlue) content.classList.add('blue-template');
+  else content.classList.remove('blue-template');
+
+  // Inject styles from template
+  doc.querySelectorAll('style').forEach(s=>{
+    const st = document.createElement('style');
+    st.textContent = s.textContent;
+    content.appendChild(st);
+  });
+
+  // Inject body content
+  doc.body.childNodes.forEach(n=>content.appendChild(document.importNode(n,true)));
+
+  // Show first page
+  showPage(0);
+
+  // Inject editability
+  injectEdit(content);
+}
+
+// ══════════════════════════════════════════
+// PAGE NAVIGATION
+// ══════════════════════════════════════════
+function buildPageNav(){
+  const cfg = TPLS[curTpl];
+  const nav = document.getElementById('pageNav');
+  nav.innerHTML='';
+  cfg.pages.forEach((lbl,i)=>{
+    const b = document.createElement('button');
+    b.className='page-pill'+(i===0?' active':'');
+    b.textContent = lbl;
+    b.onclick=()=>{
+      curPage=i;
+      document.querySelectorAll('.page-pill').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      showPage(i);
+    };
+    nav.appendChild(b);
+  });
+  // Hide nav if only 1 page
+  nav.style.display = cfg.pages.length<=1 ? 'none' : 'flex';
+}
+
+function showPage(idx){
+  const cfg = TPLS[curTpl];
+  const content = document.getElementById('tplContent');
+  const pages = content.querySelectorAll('.page');
+  pages.forEach(p=>{p.style.display='none';p.classList.remove('active')});
+
+  if(cfg.pageIds.length>0){
+    const pid = cfg.pageIds[idx];
+    if(pid){
+      const el = content.querySelector('#'+pid);
+      if(el){el.style.display='block';el.classList.add('active')}
+    }
+  } else {
+    pages.forEach(p=>{p.style.display='block';p.classList.add('active')});
+  }
+}
+
+// ══════════════════════════════════════════
+// INJECT EDITABILITY
+// ══════════════════════════════════════════
+function injectEdit(root){
+  // Text elements
+  const SELS = ['h1','h2','h3','p','button','.letter-box','.letter-long',
+    '.gift-message','.small-note','.typing-text','span.friend-name',
+    '#letterContent','#typingText','#giftMessage'];
+
+  SELS.forEach(sel=>{
+    root.querySelectorAll(sel).forEach(el=>{
+      // Skip if has block children already being made editable
+      const hasBlocks = [...el.children].some(c=>['H1','H2','H3','P','DIV'].includes(c.tagName));
+      if(hasBlocks) return;
+      el.contentEditable='true';
+      el.setAttribute('data-editable','');
+      el.spellcheck=false;
+      el.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});
+      el.addEventListener('click',e=>e.stopPropagation());
+    });
+  });
+
+  // Images → tap to replace
+  const cfg = TPLS[curTpl];
+  root.querySelectorAll('img').forEach(img=>{
+    // Find matching photo slot
+    const src = img.getAttribute('src')||'';
+    let matchKey = null;
+    for(const s of cfg.photos){
+      const stored = photos[s.key];
+      if(stored && src===stored.dataUrl){matchKey=s.key;break}
+      if(!stored && src===s.def){matchKey=s.key;break}
+      if(src===s.ph){matchKey=s.key;break}
+    }
+    if(!matchKey && cfg.photos.length>0){
+      // assign first unassigned slot
+      for(const s of cfg.photos){
+        if(!img.dataset.imgKey){matchKey=s.key;break}
+      }
+    }
+    if(matchKey){
+      img.setAttribute('data-img-key',matchKey);
+      img.addEventListener('click',e=>{
+        e.preventDefault();e.stopPropagation();
+        pickImg(matchKey,img);
+      });
+    }
+  });
+
+  // Disable links & buttons navigation (keep text editable)
+  root.querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>e.preventDefault()));
+  root.querySelectorAll('audio,video').forEach(m=>{try{m.pause();m.autoplay=false}catch{}});
+}
+
+// ══════════════════════════════════════════
+// PHOTO REPLACEMENT
+// ══════════════════════════════════════════
+function pickImg(key, imgEl){
+  pickTarget={key,imgEl};
+  document.getElementById('filePicker').click();
+}
+
+function onFilePicked(e){
+  const file=e.target.files[0];
+  e.target.value='';
+  if(!file||!pickTarget)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const url=ev.target.result;
+    const ext=file.name.split('.').pop().toLowerCase();
+    const key=pickTarget.key;
+    photos[key]={dataUrl:url,blob:file,filename:`images/${key}_${Date.now()}.${ext}`};
+    if(pickTarget.imgEl) pickTarget.imgEl.src=url;
+    toast('✓ Foto berhasil diganti!');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══════════════════════════════════════════
+// COLLECT FINAL HTML FOR UPLOAD
+// ══════════════════════════════════════════
+function collectHTML(){
+  const cfg = TPLS[curTpl];
+  const content = document.getElementById('tplContent');
+
+  // Parse original HTML
+  const parser = new DOMParser();
+  let origHTML = rawHTMLs[curTpl];
+
+  // Apply photo file paths
+  cfg.photos.forEach(s=>{
+    const d=photos[s.key];
+    origHTML=origHTML.split(s.ph).join(d?d.filename:s.def);
+  });
+
+  const origDoc = parser.parseFromString(origHTML,'text/html');
+
+  // Patch text edits — match by id first, then by tag+class
+  content.querySelectorAll('[data-editable]').forEach(edited=>{
+    const id=edited.id;
+    let target=null;
+    if(id) target=origDoc.getElementById(id);
+    if(!target){
+      const tag=edited.tagName.toLowerCase();
+      const cls=[...edited.classList].filter(c=>c!=='').join('.');
+      const sel=cls?`${tag}.${cls}`:tag;
+      try{target=origDoc.querySelector(sel)}catch{}
+    }
+    if(target){
+      let inner=edited.innerHTML
+        .replace(/ contenteditable="true"/g,'')
+        .replace(/ data-editable=""/g,'')
+        .replace(/ spellcheck="false"/g,'');
+      target.innerHTML=inner;
+    }
+  });
+
+  // Also patch images that were replaced
+  content.querySelectorAll('img[data-img-key]').forEach(img=>{
+    const key=img.getAttribute('data-img-key');
+    const d=photos[key];
+    if(!d)return;
+    // Find in origDoc by src or alt
+    origDoc.querySelectorAll('img').forEach(oi=>{
+      if(oi.src===d.dataUrl||oi.getAttribute('src')===d.dataUrl){
+        oi.setAttribute('src',d.filename);
+      }
+    });
+  });
+
+  // Restore pages
+  origDoc.querySelectorAll('.page').forEach(p=>{
+    p.style.removeProperty('display');
+    p.classList.remove('active');
+  });
+  if(cfg.pageIds.length>0){
+    const first=origDoc.querySelector('#'+cfg.pageIds[0]);
+    if(first)first.classList.add('active');
+  }
+
+  // Remove editor-injected attributes from origDoc
+  origDoc.querySelectorAll('[data-editable]').forEach(el=>{
+    el.removeAttribute('data-editable');
+    el.removeAttribute('contenteditable');
+    el.removeAttribute('spellcheck');
+  });
+  origDoc.querySelectorAll('[data-img-key]').forEach(el=>el.removeAttribute('data-img-key'));
+
+  return '<!DOCTYPE html>\n'+origDoc.documentElement.outerHTML;
+}
+
+// ══════════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════════
+function openModal(){
+  if(building)return;
+  const cfg=TPLS[curTpl];
+  const sheet=document.getElementById('modalSheet');
+  if(cfg.isBlue) sheet.classList.add('blue-modal');
+  else sheet.classList.remove('blue-modal');
+
+  document.getElementById('repoInput').value='';
+  document.getElementById('repoPreview').textContent='...';
+  document.getElementById('repoStatus').textContent='';
+  document.getElementById('repoStatus').className='repo-status';
+  document.getElementById('btnConfirm').disabled=true;
+  document.getElementById('progArea').classList.remove('show');
+  document.getElementById('doneArea').classList.remove('show');
+  document.getElementById('progBar').style.width='0%';
+  repoAvail=false;
+  document.getElementById('modalOverlay').classList.add('show');
+  setTimeout(()=>document.getElementById('repoInput').focus(),300);
+}
+
+function closeModal(){
+  if(building)return;
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+function overlayTap(e){
+  if(e.target===document.getElementById('modalOverlay'))closeModal();
+}
+
+function onRepoInput(raw){
+  const val=raw.toLowerCase().replace(/[^a-z0-9\-]/g,'');
+  document.getElementById('repoInput').value=val;
+  document.getElementById('repoPreview').textContent=val||'...';
+  clearTimeout(repoTimer);
+  repoAvail=false;
+  document.getElementById('btnConfirm').disabled=true;
+  if(!val){document.getElementById('repoStatus').textContent='';return}
+  document.getElementById('repoStatus').textContent='⏳ Mengecek...';
+  document.getElementById('repoStatus').className='repo-status checking';
+  repoTimer=setTimeout(async()=>{
+    try{
+      const r=await fetch(`${WORKER}/check-repo`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({repo:val})
+      });
+      const data=await r.json();
+      if(data.available){
+        document.getElementById('repoStatus').textContent='✓ Nama tersedia!';
+        document.getElementById('repoStatus').className='repo-status ok';
+        repoAvail=true;
+        document.getElementById('btnConfirm').disabled=false;
+      } else {
+        document.getElementById('repoStatus').textContent='✗ Nama sudah dipakai, coba yang lain';
+        document.getElementById('repoStatus').className='repo-status err';
+      }
+    }catch{
+      document.getElementById('repoStatus').textContent='✗ Gagal cek, coba lagi';
+      document.getElementById('repoStatus').className='repo-status err';
+    }
+  },700);
+}
+
+// ══════════════════════════════════════════
+// BUILD
+// ══════════════════════════════════════════
+async function startBuild(){
+  if(!repoAvail||building)return;
+  const repo=document.getElementById('repoInput').value.trim();
+  if(!repo)return;
+
+  building=true;
+  document.getElementById('btnConfirm').disabled=true;
+  document.getElementById('progArea').classList.add('show');
+
+  const cfg=TPLS[curTpl];
+
+  try{
+    setP(5,'Membuat repository...');
+    await wPost('/create-repo',{repo});
+
+    setP(20,'Menyiapkan HTML...');
+    const html=collectHTML();
+
+    setP(35,'Upload index.html...');
+    await wUpload(repo,'index.html',toB64(html));
+
+    const toUp=cfg.photos.filter(s=>photos[s.key]);
+    if(toUp.length>0){
+      await wUpload(repo,'images/.gitkeep',btoa(' '));
+    }
+    for(let i=0;i<toUp.length;i++){
+      const s=toUp[i];
+      const d=photos[s.key];
+      setP(40+Math.round(i/toUp.length*38),`Upload foto ${i+1}/${toUp.length}...`);
+      const b64=await blobToB64(d.blob);
+      await wUpload(repo,d.filename,b64);
+    }
+
+    setP(82,'Aktifkan GitHub Pages...');
+    await wPost('/enable-pages',{repo});
+
+    setP(95,'Kirim log...');
+    await wPost('/log',{repo,template:cfg.label}).catch(()=>{});
+
+    setP(100,'Selesai! 🎉');
+    building=false;
+
+    const url=`https://${GH_USER}.github.io/${repo}/`;
+    document.getElementById('doneLink').textContent=url;
+    document.getElementById('doneLink').href=url;
+    document.getElementById('doneArea').classList.add('show');
+
+  }catch(err){
+    building=false;
+    setP(0,'❌ '+err.message);
+    document.getElementById('progBar').style.background='#ff5c5c';
+    document.getElementById('btnConfirm').disabled=false;
+  }
+}
+
+function setP(pct,txt){
+  document.getElementById('progBar').style.width=pct+'%';
+  document.getElementById('progLabel').textContent=txt;
+}
+
+// ══════════════════════════════════════════
+// WORKER API HELPERS
+// ══════════════════════════════════════════
+async function wPost(path,body){
+  const r=await fetch(WORKER+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const data=await r.json();
+  if(data.error) throw new Error(data.error);
+  return data;
+}
+
+async function wUpload(repo,filePath,content){
+  return wPost('/upload-file',{repo,filePath,content,message:`add ${filePath}`});
+}
+
+function toB64(str){
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+async function blobToB64(blob){
+  const buf=await blob.arrayBuffer();
+  const bytes=new Uint8Array(buf);
+  let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));
+  return btoa(bin);
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+</script>
+</body>
+</html>
