@@ -450,9 +450,12 @@ img[data-img-key]:hover{opacity:.85;outline:3px solid rgba(246,166,187,.7);outli
 <script>
 // ══════════════════════════════════════════
 // CONFIG
+
+// ══════════════════════════════════════════
+// CONFIG
 // ══════════════════════════════════════════
 const GH_USER  = "cargift";
-const WORKER   = "https://cargift.ahmadadrian737.workers.dev"; // ganti dengan URL worker kamu
+const WORKER   = "https://cargift.ahmadadrian737.workers.dev";
 
 // ══════════════════════════════════════════
 // TEMPLATE CONFIG
@@ -462,18 +465,26 @@ const TPLS = {
     label:"🎂 Birthday 1", isBlue:false,
     pages:["Intro","Foto","Surat"],
     pageIds:["page1","page2","page3"],
+    // foto: key, placeholder di HTML/JS, default url, selector img di DOM setelah render
     photos:[
       {key:"p1",ph:"[PHOTO1]",def:"https://files.catbox.moe/qv6b1o.jpg"},
       {key:"p2",ph:"[PHOTO2]",def:"https://files.catbox.moe/qv6b1o.jpg"},
       {key:"p3",ph:"[PHOTO3]",def:"https://files.catbox.moe/qv6b1o.jpg"},
       {key:"p4",ph:"[PHOTO4]",def:"https://files.catbox.moe/qv6b1o.jpg"},
-    ]
+    ],
+    // field khusus yang butuh UI sendiri (bukan contenteditable)
+    specials:[]
   },
   birthday2:{
     label:"🎁 Birthday 2", isBlue:true,
     pages:["Hello","Happy Bday","Letter","Gift"],
     pageIds:["page1","page2","page3","page4"],
-    photos:[]
+    photos:[],
+    specials:[
+      {key:"letter1",ph:"[LETTER1]",label:"Pesan Kado Kue 🎂",def:"You're sweet as cake!"},
+      {key:"letter2",ph:"[LETTER2]",label:"Pesan Kado Ice Cream 🍦",def:"You're cool as ice cream!"},
+      {key:"letter3",ph:"[LETTER3]",label:"Pesan Kado Bunga 🌸",def:"You're beautiful as flowers!"},
+    ]
   },
   bucin1:{
     label:"💗 Bucin 1", isBlue:false,
@@ -483,6 +494,9 @@ const TPLS = {
       {key:"bp1",ph:"[PHOTO_PAGE1]",def:"https://files.catbox.moe/qv6b1o.jpg"},
       {key:"bp2",ph:"[PHOTO_PAGE2]",def:"https://files.catbox.moe/qv6b1o.jpg"},
       {key:"bp3",ph:"[PUZZLE_IMAGE]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+    ],
+    specials:[
+      {key:"passcode",ph:"[PASSCODE]",label:"Passcode (4 digit) 🔐",def:"1234",maxlen:4,inputmode:"numeric"}
     ]
   },
   bucin2:{
@@ -495,6 +509,9 @@ const TPLS = {
       {key:"bm2",ph:"[MEMORY_PHOTO2]",def:"https://files.catbox.moe/qv6b1o.jpg"},
       {key:"bm3",ph:"[MEMORY_PHOTO3]",def:"https://files.catbox.moe/qv6b1o.jpg"},
       {key:"bm4",ph:"[MEMORY_PHOTO4]",def:"https://files.catbox.moe/qv6b1o.jpg"},
+    ],
+    specials:[
+      {key:"spotify",ph:"[SPOTIFY]",label:"Link Spotify (embed URL) 🎵",def:"https://open.spotify.com/embed/track/..."}
     ]
   },
   puzzle:{
@@ -505,7 +522,8 @@ const TPLS = {
       {key:"pz1",ph:"[PUZZLE_IMAGE1]",def:"https://files.catbox.moe/qv6b1o.jpg"},
       {key:"pz2",ph:"[PUZZLE_IMAGE2]",def:"https://files.catbox.moe/qv6b1o.jpg"},
       {key:"pz3",ph:"[PUZZLE_IMAGE3]",def:"https://files.catbox.moe/qv6b1o.jpg"},
-    ]
+    ],
+    specials:[]
   }
 };
 
@@ -515,14 +533,15 @@ const TPLS = {
 let curTpl = null;
 let curPage = 0;
 let rawHTMLs = {};
-let photos = {}; // key → {dataUrl, blob, filename}
+let photos = {};    // key → {dataUrl, blob, filename}
+let specials = {};  // key → value string
 let pickTarget = null;
 let repoTimer = null;
 let repoAvail = false;
 let building = false;
 
 // ══════════════════════════════════════════
-// BOOT — preload all templates
+// BOOT
 // ══════════════════════════════════════════
 (async function boot(){
   for(const name of Object.keys(TPLS)){
@@ -534,7 +553,7 @@ let building = false;
       rawHTMLs[name] = `<div style="padding:40px 20px;text-align:center;font-family:'Nunito',sans-serif">
         <div style="font-size:3rem">😅</div>
         <p style="font-weight:800;margin-top:10px">File <b>${name}.html</b> tidak ditemukan</p>
-        <p style="color:#a08090;font-size:.85rem;margin-top:6px">Taruh semua file HTML di folder yang sama dengan index.html ini</p>
+        <p style="color:#a08090;font-size:.85rem;margin-top:6px">Taruh semua file di folder yang sama</p>
       </div>`;
     }
   }
@@ -549,12 +568,8 @@ function showScreen(id){
     if(s.id==='screen-edit') s.style.display='none';
   });
   const el = document.getElementById(id);
-  if(id==='screen-edit'){
-    el.style.display='flex';
-    el.classList.add('active');
-  } else {
-    el.classList.add('active');
-  }
+  if(id==='screen-edit'){el.style.display='flex';el.classList.add('active');}
+  else el.classList.add('active');
 }
 
 // ══════════════════════════════════════════
@@ -563,13 +578,18 @@ function showScreen(id){
 function openEditor(name){
   curTpl = name;
   curPage = 0;
-  const cfg = TPLS[name];
+  photos = {};
+  specials = {};
 
-  // Set bar label & theme
-  document.getElementById('tplLabel').textContent = cfg.label;
+  const cfg = TPLS[name];
+  // init specials defaults
+  cfg.specials.forEach(s=>{ specials[s.key] = s.def; });
+
+  // set theme
   const bar = document.getElementById('editBar');
   const nav = document.getElementById('pageNav');
   const buildBtn = document.getElementById('btnBuild');
+  document.getElementById('tplLabel').textContent = cfg.label;
   if(cfg.isBlue){
     bar.style.borderBottomColor='var(--blue3)';
     buildBtn.className='btn-build blue-theme';
@@ -592,42 +612,218 @@ function goBack(){
 }
 
 // ══════════════════════════════════════════
-// RENDER TEMPLATE INTO EDITOR
+// PRE-PROCESS HTML
+// Inject default photo URLs & replace placeholders
+// before injecting into DOM
+// ══════════════════════════════════════════
+function preprocessHTML(name){
+  const cfg = TPLS[name];
+  let html = rawHTMLs[name] || '';
+
+  // Replace photo placeholders
+  cfg.photos.forEach(s=>{
+    const d = photos[s.key];
+    const url = d ? d.dataUrl : s.def;
+    html = html.split(s.ph).join(url);
+  });
+
+  // Replace special placeholders
+  cfg.specials.forEach(s=>{
+    const val = specials[s.key] || s.def;
+    html = html.split(s.ph).join(val);
+  });
+
+  // For birthday1: renderPhotos() is called via JS
+  // We need to pre-inject photos into PHOTO_URLS array in the script
+  if(name === 'birthday1'){
+    cfg.photos.forEach(s=>{
+      const d = photos[s.key];
+      const url = d ? d.dataUrl : s.def;
+      // Already replaced above via ph
+    });
+  }
+
+  return html;
+}
+
+// ══════════════════════════════════════════
+// RENDER EDITOR
 // ══════════════════════════════════════════
 function renderEditor(){
   const cfg = TPLS[curTpl];
-  let html = rawHTMLs[curTpl] || '';
+  const html = preprocessHTML(curTpl);
 
-  // Replace photo placeholders with current data
-  cfg.photos.forEach(s=>{
-    const d = photos[s.key];
-    html = html.split(s.ph).join(d ? d.dataUrl : s.def);
-  });
-
-  // Parse HTML
   const parser = new DOMParser();
-  const doc = parser.parseFromString(html,'text/html');
+  const doc = parser.parseFromString(html, 'text/html');
 
   const content = document.getElementById('tplContent');
-  content.innerHTML='';
+  content.innerHTML = '';
   if(cfg.isBlue) content.classList.add('blue-template');
   else content.classList.remove('blue-template');
 
-  // Inject styles from template
+  // Inject template styles
   doc.querySelectorAll('style').forEach(s=>{
     const st = document.createElement('style');
     st.textContent = s.textContent;
     content.appendChild(st);
   });
 
-  // Inject body content
-  doc.body.childNodes.forEach(n=>content.appendChild(document.importNode(n,true)));
+  // Inject body content (skip scripts — we handle manually)
+  doc.body.childNodes.forEach(n=>{
+    if(n.nodeName !== 'SCRIPT')
+      content.appendChild(document.importNode(n, true));
+  });
 
-  // Show first page
-  showPage(0);
+  // For birthday1 — manually render photo grid with tappable imgs
+  if(curTpl === 'birthday1'){
+    renderBirthday1Photos(content);
+  }
 
-  // Inject editability
+  // Show current page
+  showPage(curPage);
+
+  // Make editable
   injectEdit(content);
+
+  // Inject specials panel if needed
+  injectSpecialsPanel(content, cfg);
+}
+
+// ══════════════════════════════════════════
+// BIRTHDAY 1 — manually build photo grid
+// ══════════════════════════════════════════
+function renderBirthday1Photos(content){
+  const cfg = TPLS['birthday1'];
+  const grid = content.querySelector('#photoGrid');
+  if(!grid) return;
+  grid.innerHTML = '';
+
+  cfg.photos.forEach((slot, idx)=>{
+    const d = photos[slot.key];
+    const url = d ? d.dataUrl : slot.def;
+
+    const polaroid = document.createElement('div');
+    polaroid.className = 'polaroid';
+
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = `photo ${idx+1}`;
+    img.setAttribute('data-img-key', slot.key);
+
+    const caption = document.createElement('p');
+    caption.textContent = '📸 cute!';
+    caption.contentEditable = 'true';
+    caption.setAttribute('data-editable','');
+    caption.spellcheck = false;
+
+    polaroid.appendChild(img);
+    polaroid.appendChild(caption);
+    grid.appendChild(polaroid);
+  });
+}
+
+// ══════════════════════════════════════════
+// SPECIALS PANEL
+// Floating pill buttons at bottom for passcode, spotify, gift messages
+// ══════════════════════════════════════════
+function injectSpecialsPanel(content, cfg){
+  if(cfg.specials.length === 0) return;
+
+  // Remove existing panel
+  const existing = document.getElementById('specialsPanel');
+  if(existing) existing.remove();
+
+  const panel = document.createElement('div');
+  panel.id = 'specialsPanel';
+  panel.style.cssText = `
+    position:fixed;bottom:70px;right:12px;z-index:9998;
+    display:flex;flex-direction:column;gap:6px;align-items:flex-end;
+  `;
+
+  cfg.specials.forEach(s=>{
+    const btn = document.createElement('button');
+    const isSet = specials[s.key] && specials[s.key] !== s.def;
+    btn.style.cssText = `
+      padding:7px 14px;border-radius:20px;border:none;
+      background:${cfg.isBlue?'var(--blue)':'var(--pink)'};
+      color:white;font-family:'Nunito',sans-serif;
+      font-weight:800;font-size:.72rem;cursor:pointer;
+      box-shadow:0 3px 0 ${cfg.isBlue?'#6aaede':'#d4829a'};
+      display:flex;align-items:center;gap:5px;
+    `;
+    btn.innerHTML = `<span>${s.label}</span><span>${isSet?'✓':'+'}</span>`;
+    btn.onclick = ()=> openSpecialInput(s, cfg.isBlue, btn);
+    panel.appendChild(btn);
+  });
+
+  document.body.appendChild(panel);
+}
+
+function openSpecialInput(s, isBlue, btn){
+  // Remove existing popup
+  const existing = document.getElementById('specialPopup');
+  if(existing) existing.remove();
+
+  const popup = document.createElement('div');
+  popup.id = 'specialPopup';
+  popup.style.cssText = `
+    position:fixed;bottom:130px;right:12px;left:12px;z-index:99999;
+    background:white;border-radius:20px;padding:16px;
+    box-shadow:0 8px 30px rgba(0,0,0,.2);
+    border:2px solid ${isBlue?'var(--blue3)':'var(--pink3)'};
+  `;
+
+  const label = document.createElement('div');
+  label.style.cssText='font-size:.78rem;font-weight:800;margin-bottom:8px;color:var(--text)';
+  label.textContent = s.label;
+
+  const inp = document.createElement('input');
+  inp.style.cssText=`
+    width:100%;border:2px solid ${isBlue?'var(--blue3)':'var(--pink3)'};
+    border-radius:12px;padding:10px 12px;font-size:.9rem;
+    font-family:'Nunito',sans-serif;font-weight:700;outline:none;
+    color:var(--text);background:var(--cream);
+  `;
+  inp.value = specials[s.key] || '';
+  inp.placeholder = s.def;
+  if(s.maxlen) inp.maxLength = s.maxlen;
+  if(s.inputmode) inp.inputMode = s.inputmode;
+
+  const saveBtn = document.createElement('button');
+  saveBtn.style.cssText=`
+    margin-top:10px;width:100%;padding:10px;border-radius:14px;border:none;
+    background:${isBlue?'var(--blue)':'var(--pink)'};color:white;
+    font-family:'Nunito',sans-serif;font-weight:800;font-size:.85rem;cursor:pointer;
+  `;
+  saveBtn.textContent = 'Simpan ✓';
+  saveBtn.onclick = ()=>{
+    const val = inp.value.trim();
+    if(val){
+      specials[s.key] = val;
+      btn.innerHTML = `<span>${s.label}</span><span>✓</span>`;
+      toast('✓ '+s.label+' disimpan!');
+    }
+    popup.remove();
+    // Re-render to apply
+    renderEditor();
+    buildPageNav();
+    showPage(curPage);
+  };
+
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText=`
+    position:absolute;top:10px;right:12px;background:none;border:none;
+    font-size:1.1rem;cursor:pointer;color:var(--muted);
+  `;
+  closeBtn.textContent='✕';
+  closeBtn.onclick=()=>popup.remove();
+
+  popup.appendChild(closeBtn);
+  popup.appendChild(label);
+  popup.appendChild(inp);
+  popup.appendChild(saveBtn);
+  document.body.appendChild(popup);
+  setTimeout(()=>inp.focus(),100);
 }
 
 // ══════════════════════════════════════════
@@ -636,7 +832,7 @@ function renderEditor(){
 function buildPageNav(){
   const cfg = TPLS[curTpl];
   const nav = document.getElementById('pageNav');
-  nav.innerHTML='';
+  nav.innerHTML = '';
   cfg.pages.forEach((lbl,i)=>{
     const b = document.createElement('button');
     b.className='page-pill'+(i===0?' active':'');
@@ -646,10 +842,12 @@ function buildPageNav(){
       document.querySelectorAll('.page-pill').forEach(x=>x.classList.remove('active'));
       b.classList.add('active');
       showPage(i);
+      // Close any open popups
+      const p = document.getElementById('specialPopup');
+      if(p) p.remove();
     };
     nav.appendChild(b);
   });
-  // Hide nav if only 1 page
   nav.style.display = cfg.pages.length<=1 ? 'none' : 'flex';
 }
 
@@ -674,15 +872,17 @@ function showPage(idx){
 // INJECT EDITABILITY
 // ══════════════════════════════════════════
 function injectEdit(root){
-  // Text elements
-  const SELS = ['h1','h2','h3','p','button','.letter-box','.letter-long',
-    '.gift-message','.small-note','.typing-text','span.friend-name',
-    '#letterContent','#typingText','#giftMessage'];
+  const SELS = [
+    'h1','h2','h3','p','button',
+    '.letter-box','.letter-long','.gift-message',
+    '.small-note','.typing-text','span.friend-name',
+    '#letterContent','#typingText','#giftMessage',
+    '.comment strong'
+  ];
 
   SELS.forEach(sel=>{
     root.querySelectorAll(sel).forEach(el=>{
-      // Skip if has block children already being made editable
-      const hasBlocks = [...el.children].some(c=>['H1','H2','H3','P','DIV'].includes(c.tagName));
+      const hasBlocks=[...el.children].some(c=>['H1','H2','H3','P','DIV'].includes(c.tagName));
       if(hasBlocks) return;
       el.contentEditable='true';
       el.setAttribute('data-editable','');
@@ -692,131 +892,151 @@ function injectEdit(root){
     });
   });
 
-  // Images → tap to replace
-  const cfg = TPLS[curTpl];
+  // All images → tap to replace
   root.querySelectorAll('img').forEach(img=>{
-    // Find matching photo slot
+    const cfg = TPLS[curTpl];
     const src = img.getAttribute('src')||'';
-    let matchKey = null;
-    for(const s of cfg.photos){
-      const stored = photos[s.key];
-      if(stored && src===stored.dataUrl){matchKey=s.key;break}
-      if(!stored && src===s.def){matchKey=s.key;break}
-      if(src===s.ph){matchKey=s.key;break}
-    }
-    if(!matchKey && cfg.photos.length>0){
-      // assign first unassigned slot
+    let matchKey = img.getAttribute('data-img-key');
+
+    if(!matchKey){
+      // Match by src
       for(const s of cfg.photos){
-        if(!img.dataset.imgKey){matchKey=s.key;break}
+        const stored = photos[s.key];
+        if(stored && src===stored.dataUrl){matchKey=s.key;break}
+        if(!stored && src===s.def){matchKey=s.key;break}
+      }
+      // If still no match, find first slot not yet claimed
+      if(!matchKey && cfg.photos.length>0){
+        const claimed = new Set(
+          [...root.querySelectorAll('img[data-img-key]')].map(i=>i.getAttribute('data-img-key'))
+        );
+        for(const s of cfg.photos){
+          if(!claimed.has(s.key)){matchKey=s.key;break}
+        }
       }
     }
+
     if(matchKey){
-      img.setAttribute('data-img-key',matchKey);
+      img.setAttribute('data-img-key', matchKey);
+      img.style.cursor='pointer';
       img.addEventListener('click',e=>{
         e.preventDefault();e.stopPropagation();
-        pickImg(matchKey,img);
+        pickImg(matchKey, img);
       });
     }
   });
 
-  // Disable links & buttons navigation (keep text editable)
+  // Disable links & media
   root.querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>e.preventDefault()));
   root.querySelectorAll('audio,video').forEach(m=>{try{m.pause();m.autoplay=false}catch{}});
 }
 
 // ══════════════════════════════════════════
-// PHOTO REPLACEMENT
+// PHOTO PICK
 // ══════════════════════════════════════════
 function pickImg(key, imgEl){
-  pickTarget={key,imgEl};
+  pickTarget={key, imgEl};
   document.getElementById('filePicker').click();
 }
 
 function onFilePicked(e){
   const file=e.target.files[0];
   e.target.value='';
-  if(!file||!pickTarget)return;
+  if(!file||!pickTarget) return;
   const reader=new FileReader();
   reader.onload=ev=>{
     const url=ev.target.result;
     const ext=file.name.split('.').pop().toLowerCase();
     const key=pickTarget.key;
     photos[key]={dataUrl:url,blob:file,filename:`images/${key}_${Date.now()}.${ext}`};
+
+    // Update ALL images with this key in the current DOM
+    const content=document.getElementById('tplContent');
+    content.querySelectorAll(`img[data-img-key="${key}"]`).forEach(img=>img.src=url);
+    // Also update if img was passed directly
     if(pickTarget.imgEl) pickTarget.imgEl.src=url;
-    toast('✓ Foto berhasil diganti!');
+
+    toast('✓ Foto berhasil diganti! 📸');
   };
   reader.readAsDataURL(file);
 }
 
 // ══════════════════════════════════════════
-// COLLECT FINAL HTML FOR UPLOAD
+// COLLECT FINAL HTML
 // ══════════════════════════════════════════
 function collectHTML(){
   const cfg = TPLS[curTpl];
-  const content = document.getElementById('tplContent');
 
-  // Parse original HTML
-  const parser = new DOMParser();
-  let origHTML = rawHTMLs[curTpl];
+  // Start from raw HTML
+  let html = rawHTMLs[curTpl];
 
-  // Apply photo file paths
+  // Replace photo placeholders with filenames (for final output)
   cfg.photos.forEach(s=>{
     const d=photos[s.key];
-    origHTML=origHTML.split(s.ph).join(d?d.filename:s.def);
+    html=html.split(s.ph).join(d?d.filename:s.def);
   });
 
-  const origDoc = parser.parseFromString(origHTML,'text/html');
+  // Replace special placeholders
+  cfg.specials.forEach(s=>{
+    const val=specials[s.key]||s.def;
+    html=html.split(s.ph).join(val);
+  });
 
-  // Patch text edits — match by id first, then by tag+class
+  // Parse and patch text edits from live DOM
+  const parser=new DOMParser();
+  const origDoc=parser.parseFromString(html,'text/html');
+  const content=document.getElementById('tplContent');
+
   content.querySelectorAll('[data-editable]').forEach(edited=>{
     const id=edited.id;
     let target=null;
     if(id) target=origDoc.getElementById(id);
     if(!target){
       const tag=edited.tagName.toLowerCase();
-      const cls=[...edited.classList].filter(c=>c!=='').join('.');
-      const sel=cls?`${tag}.${cls}`:tag;
-      try{target=origDoc.querySelector(sel)}catch{}
+      const cls=[...edited.classList].filter(c=>!['blue-template'].includes(c));
+      if(cls.length>0){
+        try{target=origDoc.querySelector(tag+'.'+cls.join('.'))}catch{}
+      }
+      if(!target) try{target=origDoc.querySelector(tag)}catch{}
     }
     if(target){
-      let inner=edited.innerHTML
+      target.innerHTML=edited.innerHTML
         .replace(/ contenteditable="true"/g,'')
         .replace(/ data-editable=""/g,'')
         .replace(/ spellcheck="false"/g,'');
-      target.innerHTML=inner;
     }
   });
 
-  // Also patch images that were replaced
-  content.querySelectorAll('img[data-img-key]').forEach(img=>{
-    const key=img.getAttribute('data-img-key');
-    const d=photos[key];
-    if(!d)return;
-    // Find in origDoc by src or alt
-    origDoc.querySelectorAll('img').forEach(oi=>{
-      if(oi.src===d.dataUrl||oi.getAttribute('src')===d.dataUrl){
-        oi.setAttribute('src',d.filename);
-      }
-    });
-  });
+  // For birthday1 — patch photo captions (rendered dynamically)
+  if(curTpl==='birthday1'){
+    const grid=content.querySelector('#photoGrid');
+    if(grid){
+      const captions=[...grid.querySelectorAll('.polaroid p')].map(p=>p.innerHTML
+        .replace(/ contenteditable="true"/g,'')
+        .replace(/ data-editable=""/g,'')
+        .replace(/ spellcheck="false"/g,''));
+      // Patch into PHOTO_URLS section — photos already patched above via ph
+      // Captions are hardcoded in renderPhotos so we just need photos
+    }
+  }
 
-  // Restore pages
+  // Restore page visibility
   origDoc.querySelectorAll('.page').forEach(p=>{
     p.style.removeProperty('display');
     p.classList.remove('active');
   });
   if(cfg.pageIds.length>0){
     const first=origDoc.querySelector('#'+cfg.pageIds[0]);
-    if(first)first.classList.add('active');
+    if(first) first.classList.add('active');
   }
 
-  // Remove editor-injected attributes from origDoc
-  origDoc.querySelectorAll('[data-editable]').forEach(el=>{
+  // Clean editor artifacts
+  origDoc.querySelectorAll('[data-editable],[data-img-key]').forEach(el=>{
     el.removeAttribute('data-editable');
     el.removeAttribute('contenteditable');
     el.removeAttribute('spellcheck');
+    el.removeAttribute('data-img-key');
   });
-  origDoc.querySelectorAll('[data-img-key]').forEach(el=>el.removeAttribute('data-img-key'));
 
   return '<!DOCTYPE html>\n'+origDoc.documentElement.outerHTML;
 }
@@ -825,7 +1045,11 @@ function collectHTML(){
 // MODAL
 // ══════════════════════════════════════════
 function openModal(){
-  if(building)return;
+  if(building) return;
+  // Close any popups
+  const p=document.getElementById('specialPopup');
+  if(p) p.remove();
+
   const cfg=TPLS[curTpl];
   const sheet=document.getElementById('modalSheet');
   if(cfg.isBlue) sheet.classList.add('blue-modal');
@@ -839,18 +1063,19 @@ function openModal(){
   document.getElementById('progArea').classList.remove('show');
   document.getElementById('doneArea').classList.remove('show');
   document.getElementById('progBar').style.width='0%';
+  document.getElementById('progBar').style.background='';
   repoAvail=false;
   document.getElementById('modalOverlay').classList.add('show');
   setTimeout(()=>document.getElementById('repoInput').focus(),300);
 }
 
 function closeModal(){
-  if(building)return;
+  if(building) return;
   document.getElementById('modalOverlay').classList.remove('show');
 }
 
 function overlayTap(e){
-  if(e.target===document.getElementById('modalOverlay'))closeModal();
+  if(e.target===document.getElementById('modalOverlay')) closeModal();
 }
 
 function onRepoInput(raw){
@@ -876,11 +1101,11 @@ function onRepoInput(raw){
         repoAvail=true;
         document.getElementById('btnConfirm').disabled=false;
       } else {
-        document.getElementById('repoStatus').textContent='✗ Nama sudah dipakai, coba yang lain';
+        document.getElementById('repoStatus').textContent='✗ Sudah dipakai, coba nama lain';
         document.getElementById('repoStatus').className='repo-status err';
       }
-    }catch{
-      document.getElementById('repoStatus').textContent='✗ Gagal cek, coba lagi';
+    }catch(e){
+      document.getElementById('repoStatus').textContent='✗ Gagal cek: '+e.message;
       document.getElementById('repoStatus').className='repo-status err';
     }
   },700);
@@ -890,14 +1115,12 @@ function onRepoInput(raw){
 // BUILD
 // ══════════════════════════════════════════
 async function startBuild(){
-  if(!repoAvail||building)return;
+  if(!repoAvail||building) return;
   const repo=document.getElementById('repoInput').value.trim();
-  if(!repo)return;
-
+  if(!repo) return;
   building=true;
   document.getElementById('btnConfirm').disabled=true;
   document.getElementById('progArea').classList.add('show');
-
   const cfg=TPLS[curTpl];
 
   try{
@@ -950,7 +1173,7 @@ function setP(pct,txt){
 }
 
 // ══════════════════════════════════════════
-// WORKER API HELPERS
+// WORKER HELPERS
 // ══════════════════════════════════════════
 async function wPost(path,body){
   const r=await fetch(WORKER+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -958,15 +1181,10 @@ async function wPost(path,body){
   if(data.error) throw new Error(data.error);
   return data;
 }
-
 async function wUpload(repo,filePath,content){
   return wPost('/upload-file',{repo,filePath,content,message:`add ${filePath}`});
 }
-
-function toB64(str){
-  return btoa(unescape(encodeURIComponent(str)));
-}
-
+function toB64(str){return btoa(unescape(encodeURIComponent(str)))}
 async function blobToB64(blob){
   const buf=await blob.arrayBuffer();
   const bytes=new Uint8Array(buf);
